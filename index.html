@@ -169,29 +169,29 @@
       <div class="stats" id="stats" style="display: none">
         <div class="stat-card">
           <div class="stat-number" id="totalRecords">0</div>
-          <div>Всего записей</div>
+          <div>Усього записів</div>
         </div>
         <div class="stat-card">
           <div class="stat-number" id="totalBrands">0</div>
-          <div>Брендов</div>
+          <div>Брендів</div>
         </div>
         <div class="stat-card">
           <div class="stat-number" id="totalCategories">0</div>
-          <div>Категорий</div>
+          <div>Категорій</div>
         </div>
       </div>
 
       <div id="preview" class="preview" style="display: none"></div>
 
       <button id="downloadBtn" onclick="downloadExcel()" style="display: none">
-        📥 Скачать Excel файл
+        📥 Завантажити файл Excel
       </button>
     </div>
 
     <script>
       let processedData = [];
 
-      // Обработка загрузки файлов
+      // Обробка завантаження файлів
       const uploadArea = document.getElementById("uploadArea");
       const fileInput = document.getElementById("fileInput");
 
@@ -232,11 +232,11 @@
 
       function handleFile(file) {
         if (!file.name.toLowerCase().endsWith(".csv")) {
-          showStatus("Пожалуйста, выберите CSV файл", "error");
+          showStatus("Будь ласка, виберіть CSV файл", "error");
           return;
         }
 
-        showStatus("Загрузка и обработка файла...", "info");
+        showStatus("Завантаження та обробка файлу...", "info");
 
         const reader = new FileReader();
         reader.onload = function (e) {
@@ -254,13 +254,14 @@
             dynamicTyping: false,
           });
 
-          // Найдем строку с заголовками
+          // Знайдемо рядок із заголовками
           let headerRowIndex = -1;
           for (let i = 0; i < parsedData.data.length; i++) {
             const row = parsedData.data[i];
             if (
               row.some(
-                (cell) => cell && cell.toString().includes("Начальный остаток"),
+                (cell) =>
+                  cell && cell.toString().includes("Початковий залишок"),
               )
             ) {
               headerRowIndex = i;
@@ -269,7 +270,7 @@
           }
 
           if (headerRowIndex === -1) {
-            showStatus("Не найдены заголовки таблицы в CSV файле", "error");
+            showStatus("Не знайдено заголовки таблиці в CSV файлі", "error");
             return;
           }
 
@@ -277,11 +278,11 @@
           let currentBrand = "";
           let currentCategory = "";
 
-          // Обрабатываем данные
+          // Обробляємо дані
           for (let i = headerRowIndex + 1; i < parsedData.data.length; i++) {
             const row = parsedData.data[i];
 
-            // Пропускаем пустые строки
+            // Пропускаємо пусті рядки
             if (row.every((cell) => !cell || cell.trim() === "")) continue;
 
             const hasFirstCol = row[0] && row[0].trim() !== "";
@@ -294,7 +295,7 @@
               const expense = cleanNumber(row[7]);
               const endBalance = cleanNumber(row[8]);
 
-              // Определяем бренды
+              // Визначаємо бренди
               const isBrand =
                 productName.length < 30 &&
                 ([
@@ -313,7 +314,7 @@
                 currentBrand = productName;
                 currentCategory = "";
               } else {
-                // Определяем категории
+                // Визначаємо категорії
                 const categoryKeywords = [
                   "для котів",
                   "для собак",
@@ -338,17 +339,17 @@
                 if (isCategory && productName !== currentCategory) {
                   currentCategory = productName;
                 } else if (!isCategory) {
-                  // Это конкретный товар
+                  // Це конкретний товар
                   // Розрахунок рекомендованого замовлення за правилом півтора
                   const targetStock = expense * 1.5; // запас на тиждень + 50%
                   let recommendedOrder = Math.max(0, targetStock - endBalance);
                   if (recommendedOrder > 0 && recommendedOrder < 1) {
                     recommendedOrder = 1; // мінімальний поріг
                   }
-                  
+
                   finalData.push({
                     brand: currentBrand || "Без бренда",
-                    category: currentCategory || "Общая категория",
+                    category: currentCategory || "Загальна категорія",
                     productName: productName,
                     startBalance: startBalance,
                     income: income,
@@ -363,7 +364,7 @@
 
           processedData = finalData;
 
-          // Показываем статистику
+          // Показуємо статистику
           const brands = [...new Set(finalData.map((item) => item.brand))];
           const categories = [
             ...new Set(finalData.map((item) => item.category)),
@@ -376,26 +377,26 @@
             categories.length;
           document.getElementById("stats").style.display = "grid";
 
-          // Показываем предварительный просмотр
+          // Показуємо попередній перегляд
           showPreview(finalData.slice(0, 20));
 
           showStatus(
-            `Успешно обработано ${finalData.length} записей товаров`,
+            `Успішно оброблено ${finalData.length} записів товарів`,
             "success",
           );
           document.getElementById("downloadBtn").style.display = "block";
         } catch (error) {
-          showStatus(`Ошибка при обработке файла: ${error.message}`, "error");
+          showStatus(`Помилка при обробці файлу: ${error.message}`, "error");
         }
       }
 
       function showPreview(data) {
         const previewDiv = document.getElementById("preview");
 
-        let html = "<h3>Предварительный просмотр (первые 20 записей):</h3>";
+        let html = "<h3>Попередній перегляд (перші 20 записів):</h3>";
         html += "<table>";
         html +=
-          "<tr><th>Марка</th><th>Вид номенклатуры</th><th>Наименование товара</th><th>Нач. остаток</th><th>Приход</th><th>Расход</th><th>Кон. остаток</th><th>Рекомендовано замовити</th></tr>";
+          "<tr><th>Марка</th><th>Вид номенклатури</th><th>Найменування товару</th><th>Нач. залишок</th><th>Приход</th><th>Расход</th><th>Кін. залишок</th><th>Рекомендовано замовити</th></tr>";
 
         data.forEach((item) => {
           html += `<tr>
@@ -417,23 +418,23 @@
 
       function downloadExcel() {
         if (processedData.length === 0) {
-          showStatus("Нет данных для скачивания", "error");
+          showStatus("Немає даних для завантаження", "error");
           return;
         }
 
-        // Создаем Excel файл
+        // Створюємо файл Excel
         const workbook = XLSX.utils.book_new();
 
-        // Подготавливаем данные
+        // Підготовлюємо дані
         const excelData = [
           [
             "Марка",
-            "Вид номенклатуры",
-            "Наименование товара",
-            "Начальный остаток",
+            "Вид номенклатури",
+            "Найменування товару",
+            "Начальний залишок",
             "Приход",
             "Расход",
-            "Конечный остаток",
+            "Кінцевий залишок",
             "Рекомендовано замовити",
           ],
         ];
@@ -451,26 +452,26 @@
           ]);
         });
 
-        // Создаем рабочий лист
+        // Створюємо робочий лист
         const worksheet = XLSX.utils.aoa_to_sheet(excelData);
 
-        // Устанавливаем ширину колонок
+        // Встановлюємо ширину колонок
         const colWidths = [
           { wch: 20 }, // Марка
-          { wch: 30 }, // Вид номенклатуры
-          { wch: 50 }, // Наименование товара
-          { wch: 15 }, // Начальный остаток
+          { wch: 30 }, // Вид номенклатури
+          { wch: 50 }, // Найменування товару
+          { wch: 15 }, // Начальний залишок
           { wch: 15 }, // Приход
           { wch: 15 }, // Расход
-          { wch: 15 }, // Конечный остаток
+          { wch: 15 }, // Кінцевий залишок
           { wch: 20 }, // Рекомендовано замовити
         ];
         worksheet["!cols"] = colWidths;
 
-        // Добавляем лист в книгу
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Логистика");
+        // Додаємо лист в книгу
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Логістика");
 
-        // Сохраняем файл
+        // Зберігаємо файл
         XLSX.writeFile(workbook, "logist_optimised.xlsx");
 
         showStatus(
