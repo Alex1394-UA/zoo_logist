@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="uk">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Помічник створення замовлень постачальникам</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.0/papaparse.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+      .container {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 30px;
+        border-radius: 15px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+      }
+      .upload-area {
+        border: 2px dashed rgba(255, 255, 255, 0.5);
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        margin: 20px 0;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      .upload-area:hover {
+        border-color: rgba(255, 255, 255, 0.8);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .upload-area.dragover {
+        border-color: #4caf50;
+        background: rgba(76, 175, 80, 0.1);
+      }
+      input[type="file"] {
+        display: none;
+      }
+      button {
+        background: linear-gradient(45deg, #4caf50, #45a049);
+        color: white;
+        border: none;
+        padding: 12px 24px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+      }
+      button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(76, 175, 80, 0.4);
+      }
+      button:disabled {
+        background: #666;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+      .status {
+        margin: 20px 0;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .status.success {
+        background: rgba(76, 175, 80, 0.2);
+        border: 1px solid rgba(76, 175, 80, 0.5);
+      }
+      .status.error {
+        background: rgba(244, 67, 54, 0.2);
+        border: 1px solid rgba(244, 67, 54, 0.5);
+      }
+      .status.info {
+        background: rgba(33, 150, 243, 0.2);
+        border: 1px solid rgba(33, 150, 243, 0.5);
+      }
+      .preview {
+        margin: 20px 0;
+        background: rgba(0, 0, 0, 0.2);
+        border-radius: 8px;
+        padding: 15px;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .preview table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      .preview th,
+      .preview td {
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 8px;
+        text-align: left;
+      }
+      .preview th {
+        background: rgba(255, 255, 255, 0.1);
+        font-weight: bold;
+      }
+      h1 {
+        text-align: center;
+        margin-bottom: 30px;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      }
+      .instructions {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px 0;
+      }
+      .stat-card {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+      }
+      .stat-number {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4caf50;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>📊 Помічник створення замовлень постачальникам</h1>
+
+      <div class="instructions">
+        <h3>Інструкції:</h3>
+        <p>1. Завантажте ваш CSV файл з даними про рух товарів за тиждень</p>
+        <p>
+          2. Система автоматично обробить дані та створить структурований Excel
+          файл
+        </p>
+        <p>
+          3. У результуючому файлі будуть колонки: Марка, Вид номенклатури,
+          Найменування товару, Початковий залишок, Прихід, Витрата, Кінцевий
+          залишок
+        </p>
+      </div>
+
+      <div
+        class="upload-area"
+        id="uploadArea"
+        onclick="document.getElementById('fileInput').click()"
+      >
+        <p>🗂️ Натисніть тут або перетягніть файл CSV для завантаження</p>
+        <p style="font-size: 14px; opacity: 0.8">Підтримуються файли .csv</p>
+      </div>
+
+      <input type="file" id="fileInput" accept=".csv" />
+
+      <div id="status"></div>
+
+      <div class="stats" id="stats" style="display: none">
+        <div class="stat-card">
+          <div class="stat-number" id="totalRecords">0</div>
+          <div>Всего записей</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="totalBrands">0</div>
+          <div>Брендов</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="totalCategories">0</div>
+          <div>Категорий</div>
+        </div>
+      </div>
+
+      <div id="preview" class="preview" style="display: none"></div>
+
+      <button id="downloadBtn" onclick="downloadExcel()" style="display: none">
+        📥 Скачать Excel файл
+      </button>
+    </div>
+
+    <script>
+      let processedData = [];
+
+      // Обработка загрузки файлов
+      const uploadArea = document.getElementById("uploadArea");
+      const fileInput = document.getElementById("fileInput");
+
+      // Drag and drop
+      uploadArea.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        uploadArea.classList.add("dragover");
+      });
+
+      uploadArea.addEventListener("dragleave", () => {
+        uploadArea.classList.remove("dragover");
+      });
+
+      uploadArea.addEventListener("drop", (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove("dragover");
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          handleFile(files[0]);
+        }
+      });
+
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+          handleFile(e.target.files[0]);
+        }
+      });
+
+      function showStatus(message, type = "info") {
+        const statusDiv = document.getElementById("status");
+        statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+      }
+
+      function cleanNumber(value) {
+        if (!value || value === "") return 0;
+        return parseFloat(value.toString().replace(",", ".")) || 0;
+      }
+
+      function handleFile(file) {
+        if (!file.name.toLowerCase().endsWith(".csv")) {
+          showStatus("Пожалуйста, выберите CSV файл", "error");
+          return;
+        }
+
+        showStatus("Загрузка и обработка файла...", "info");
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const content = e.target.result;
+          processCSVData(content);
+        };
+        reader.readAsText(file, "utf-8");
+      }
+
+      function processCSVData(content) {
+        try {
+          const parsedData = Papa.parse(content, {
+            delimiter: ",",
+            skipEmptyLines: false,
+            dynamicTyping: false,
+          });
+
+          // Найдем строку с заголовками
+          let headerRowIndex = -1;
+          for (let i = 0; i < parsedData.data.length; i++) {
+            const row = parsedData.data[i];
+            if (
+              row.some(
+                (cell) => cell && cell.toString().includes("Начальный остаток"),
+              )
+            ) {
+              headerRowIndex = i;
+              break;
+            }
+          }
+
+          if (headerRowIndex === -1) {
+            showStatus("Не найдены заголовки таблицы в CSV файле", "error");
+            return;
+          }
+
+          let finalData = [];
+          let currentBrand = "";
+          let currentCategory = "";
+
+          // Обрабатываем данные
+          for (let i = headerRowIndex + 1; i < parsedData.data.length; i++) {
+            const row = parsedData.data[i];
+
+            // Пропускаем пустые строки
+            if (row.every((cell) => !cell || cell.trim() === "")) continue;
+
+            const hasFirstCol = row[0] && row[0].trim() !== "";
+            const hasNumbers = row[4] || row[6] || row[7] || row[8];
+
+            if (hasFirstCol && hasNumbers) {
+              const productName = row[0].trim();
+              const startBalance = cleanNumber(row[4]);
+              const income = cleanNumber(row[6]);
+              const expense = cleanNumber(row[7]);
+              const endBalance = cleanNumber(row[8]);
+
+              // Определяем бренды
+              const isBrand =
+                productName.length < 30 &&
+                ([
+                  "ACANA",
+                  "AnimAll",
+                  "Bayer",
+                  "BOSCH",
+                  "Brit Care",
+                  "Carnilove",
+                  "Cat Chow",
+                ].includes(productName) ||
+                  productName.toUpperCase() === productName ||
+                  /^[A-Z][a-zA-Z\s&\.]+$/.test(productName));
+
+              if (isBrand) {
+                currentBrand = productName;
+                currentCategory = "";
+              } else {
+                // Определяем категории
+                const categoryKeywords = [
+                  "для котів",
+                  "для собак",
+                  "ласощі",
+                  "корм",
+                  "засоби",
+                  "шампунь",
+                  "консерва",
+                  "наповнювач",
+                  "протипаразитні",
+                  "поводки, рулетки",
+                ];
+                const isCategory =
+                  categoryKeywords.some((keyword) =>
+                    productName.toLowerCase().includes(keyword),
+                  ) &&
+                  !productName.includes(" г") &&
+                  !productName.includes("кг") &&
+                  !productName.includes("мл") &&
+                  !productName.match(/\d/);
+
+                if (isCategory && productName !== currentCategory) {
+                  currentCategory = productName;
+                } else if (!isCategory) {
+                  // Это конкретный товар
+                  // Розрахунок рекомендованого замовлення за правилом півтора
+                  const targetStock = expense * 1.5; // запас на тиждень + 50%
+                  let recommendedOrder = Math.max(0, targetStock - endBalance);
+                  if (recommendedOrder > 0 && recommendedOrder < 1) {
+                    recommendedOrder = 1; // мінімальний поріг
+                  }
+                  
+                  finalData.push({
+                    brand: currentBrand || "Без бренда",
+                    category: currentCategory || "Общая категория",
+                    productName: productName,
+                    startBalance: startBalance,
+                    income: income,
+                    expense: expense,
+                    endBalance: endBalance,
+                    recommendedOrder: Math.round(recommendedOrder), // округлюємо до цілого
+                  });
+                }
+              }
+            }
+          }
+
+          processedData = finalData;
+
+          // Показываем статистику
+          const brands = [...new Set(finalData.map((item) => item.brand))];
+          const categories = [
+            ...new Set(finalData.map((item) => item.category)),
+          ];
+
+          document.getElementById("totalRecords").textContent =
+            finalData.length;
+          document.getElementById("totalBrands").textContent = brands.length;
+          document.getElementById("totalCategories").textContent =
+            categories.length;
+          document.getElementById("stats").style.display = "grid";
+
+          // Показываем предварительный просмотр
+          showPreview(finalData.slice(0, 20));
+
+          showStatus(
+            `Успешно обработано ${finalData.length} записей товаров`,
+            "success",
+          );
+          document.getElementById("downloadBtn").style.display = "block";
+        } catch (error) {
+          showStatus(`Ошибка при обработке файла: ${error.message}`, "error");
+        }
+      }
+
+      function showPreview(data) {
+        const previewDiv = document.getElementById("preview");
+
+        let html = "<h3>Предварительный просмотр (первые 20 записей):</h3>";
+        html += "<table>";
+        html +=
+          "<tr><th>Марка</th><th>Вид номенклатуры</th><th>Наименование товара</th><th>Нач. остаток</th><th>Приход</th><th>Расход</th><th>Кон. остаток</th><th>Рекомендовано замовити</th></tr>";
+
+        data.forEach((item) => {
+          html += `<tr>
+						<td>${item.brand}</td>
+						<td>${item.category}</td>
+						<td>${item.productName}</td>
+						<td>${item.startBalance}</td>
+						<td>${item.income}</td>
+						<td>${item.expense}</td>
+						<td>${item.endBalance}</td>
+						<td>${item.recommendedOrder}</td>
+					</tr>`;
+        });
+
+        html += "</table>";
+        previewDiv.innerHTML = html;
+        previewDiv.style.display = "block";
+      }
+
+      function downloadExcel() {
+        if (processedData.length === 0) {
+          showStatus("Нет данных для скачивания", "error");
+          return;
+        }
+
+        // Создаем Excel файл
+        const workbook = XLSX.utils.book_new();
+
+        // Подготавливаем данные
+        const excelData = [
+          [
+            "Марка",
+            "Вид номенклатуры",
+            "Наименование товара",
+            "Начальный остаток",
+            "Приход",
+            "Расход",
+            "Конечный остаток",
+            "Рекомендовано замовити",
+          ],
+        ];
+
+        processedData.forEach((item) => {
+          excelData.push([
+            item.brand,
+            item.category,
+            item.productName,
+            item.startBalance,
+            item.income,
+            item.expense,
+            item.endBalance,
+            item.recommendedOrder,
+          ]);
+        });
+
+        // Создаем рабочий лист
+        const worksheet = XLSX.utils.aoa_to_sheet(excelData);
+
+        // Устанавливаем ширину колонок
+        const colWidths = [
+          { wch: 20 }, // Марка
+          { wch: 30 }, // Вид номенклатуры
+          { wch: 50 }, // Наименование товара
+          { wch: 15 }, // Начальный остаток
+          { wch: 15 }, // Приход
+          { wch: 15 }, // Расход
+          { wch: 15 }, // Конечный остаток
+          { wch: 20 }, // Рекомендовано замовити
+        ];
+        worksheet["!cols"] = colWidths;
+
+        // Добавляем лист в книгу
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Логистика");
+
+        // Сохраняем файл
+        XLSX.writeFile(workbook, "logist_optimised.xlsx");
+
+        showStatus(
+          `Excel файл "logist_optimised.xlsx" успішно завантажено!`,
+          "success",
+        );
+      }
+    </script>
+  </body>
+</html>
