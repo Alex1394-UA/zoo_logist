@@ -260,8 +260,7 @@
             const row = parsedData.data[i];
             if (
               row.some(
-                (cell) =>
-                  cell && cell.toString().includes("Початковий залишок"),
+                (cell) => cell && cell.toString().includes("Начальный остаток"), // назва ячейки як у оригінальному файлі, не перекладаємо
               )
             ) {
               headerRowIndex = i;
